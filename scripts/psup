@@ -1,0 +1,99 @@
+#!/usr/bin/perl -w
+
+use strict;
+use warnings;
+
+# if not root, exec via sudo
+if ($< != 0) {
+	print "This script needs to run as root. Re-execing via sudo.\n";
+	exec '/usr/bin/sudo', 'perl', $0, @ARGV;
+}
+
+my $pids = {};
+my $files = {};
+
+chdir("/proc/");
+
+opendir PROC, ".";
+
+while (my $pid = readdir PROC) {
+
+	next unless $pid =~ /^\d+$/;
+
+	check_pid_maps($pid);
+
+}
+
+foreach my $pid (keys %{$pids}) {
+
+	next unless scalar @{$pids->{$pid}};
+
+	my $prog = readlink "$pid/exe";
+
+	print "Running process $prog (pid $pid) references mismatched inodes for " . scalar(@{$pids->{$pid}}) . " files\n";
+}
+
+foreach my $file (keys %{$files}) {
+
+	next unless scalar @{$files->{$file}};
+
+	print "Update to $file requires restart of " . scalar(@{$files->{$file}}). " pids\n";
+}
+
+sub check_pid_maps {
+	my ($pid) = @_;
+
+	my $ret = open MAPS, "$pid/maps";
+
+	next unless $ret;
+
+	$pids->{$pid} = [];
+
+	while (<MAPS>) {
+
+		chomp;
+		my @e = split /\s+/;
+
+		my $inode = $e[4];
+		my $file = $e[5];
+
+		if ($file and -x $file) {
+			my @s = stat $file;
+
+			my $r_inode = $s[1];
+
+			if (!defined($files->{$file})) {
+				$files->{$file} = [];
+			}
+
+			if ($inode ne $r_inode) {
+				push_if_not_in($file, $pids->{$pid});
+				push_if_not_in($pid, $files->{$file});
+			}
+
+		}
+
+	}
+
+	close MAPS;
+
+}
+
+sub push_if_not_in {
+	my ($needle, $haystack) = @_;
+
+	return unless $needle;
+
+	push @{$haystack}, $needle if (!in_array($needle, @{$haystack}));
+}
+
+sub in_array {
+	my ($needle, @haystack) = @_;
+
+	foreach my $hay (@haystack) {
+		return 1 if $hay eq $needle;
+	}
+
+	return 0;
+}
+
