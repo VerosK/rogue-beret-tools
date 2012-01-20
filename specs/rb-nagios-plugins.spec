@@ -1,7 +1,7 @@
 Name:		rb-nagios-plugins
 Version:	1.0
 Release:	1%{?dist}
-Summary:	Cloudflare Apache Module
+Summary:	Nagios Plugins by Rogue Beret
 
 Group:		Applications/System
 License:	Public Domain/WTFPL
