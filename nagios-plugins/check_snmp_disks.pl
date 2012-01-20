@@ -160,7 +160,7 @@ if (scalar(keys(%{$disks})) == 0 ) {
 
 	my @status;
 
-	foreach my $key (sort {$disks->{$b} cmp $disks->{$a} } keys %{$disks}) {
+	foreach my $key (sort {$disks->{$b} <=> $disks->{$a} } keys %{$disks}) {
 		push @status, "$key " . $disks->{$key} . "% full";
 	}
 
