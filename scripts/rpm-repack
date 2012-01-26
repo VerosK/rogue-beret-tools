@@ -190,10 +190,16 @@ $rpm->{postuninstall}
 ~;
 }
 
-if ("(none)" ne $rpm->{changelog}) {
-	$rpm_spec .= qq~
+chomp(my $dstr = `date +"%a %b %d %Y"`);
+$rpm_spec .= qq~
 
 %changelog
+* $dstr $ENV{USER} <$ENV{USER}\@$ENV{HOSTNAME}> $rpm->{version}-$rpm->{release}
+- repackaged with rpm-repack on $ENV{HOSTNAME}
+~;
+
+if ("(none)" ne $rpm->{changelog}) {
+	$rpm_spec .= qq~
 $rpm->{changelog}
 ~;
 }
