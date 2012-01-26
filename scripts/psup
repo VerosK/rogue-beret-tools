@@ -9,8 +9,12 @@ if ($< != 0) {
 	exec '/usr/bin/sudo', 'perl', $0, @ARGV;
 }
 
-my $pids = {};
-my $files = {};
+my $pid2so = {};
+my $so2pid = {};
+my $so2prog = {};
+my $pid2prog = {};
+my $prog2pid = {};
+my $prog2so = {};
 
 chdir("/proc/");
 
@@ -24,20 +28,29 @@ while (my $pid = readdir PROC) {
 
 }
 
-foreach my $pid (keys %{$pids}) {
+foreach my $pid (sort keys %{$pid2so}) {
 
-	next unless scalar @{$pids->{$pid}};
+	next unless scalar @{$pid2so->{$pid}};
 
-	my $prog = readlink "$pid/exe";
+	my $prog = $pid2prog->{$pid};
 
-	print "Running process $prog (pid $pid) references mismatched inodes for " . scalar(@{$pids->{$pid}}) . " files\n";
+	print "Running process $prog (pid $pid) references mismatched inodes for " . scalar(@{$pid2so->{$pid}}) . " files\n";
 }
 
-foreach my $file (keys %{$files}) {
+foreach my $prog (keys %{$prog2so}) {
 
-	next unless scalar @{$files->{$file}};
+	print "Program $prog (" . scalar @{$prog2pid->{$prog}} . " pids) references mismatched inodes for " . scalar(@{$prog2so->{$prog}}) . " files\n";
 
-	print "Update to $file requires restart of " . scalar(@{$files->{$file}}). " pids\n";
+}
+
+foreach my $file (keys %{$so2pid}) {
+
+	next unless scalar @{$so2pid->{$file}};
+
+	my $progs = {};
+	map { $progs->{$pid2prog->{$_}} = 1 } @{$so2pid->{$file}};
+
+	print "Update to $file requires restart of " . scalar(keys(%{$progs})) . " programs (" . scalar(@{$so2pid->{$file}}). " pids)\n";
 }
 
 sub check_pid_maps {
@@ -47,7 +60,7 @@ sub check_pid_maps {
 
 	next unless $ret;
 
-	$pids->{$pid} = [];
+	$pid2so->{$pid} = [];
 
 	while (<MAPS>) {
 
@@ -62,13 +75,28 @@ sub check_pid_maps {
 
 			my $r_inode = $s[1];
 
-			if (!defined($files->{$file})) {
-				$files->{$file} = [];
+			if (!defined($so2pid->{$file})) {
+				$so2pid->{$file} = [];
 			}
 
 			if ($inode ne $r_inode) {
-				push_if_not_in($file, $pids->{$pid});
-				push_if_not_in($pid, $files->{$file});
+
+				my $prog = readlink "$pid/exe";
+				$pid2prog->{$pid} = $prog;
+
+				if (!defined($prog2pid->{$prog})) {
+					$prog2pid->{$prog} = [];
+				}
+
+				if (!defined($prog2so->{$prog})) {
+					$prog2so->{$prog} = [];
+				}
+
+				push_if_not_in($pid, $prog2pid->{$prog});
+				push_if_not_in($file, $pid2so->{$pid});
+				push_if_not_in($pid, $so2pid->{$file});
+				push_if_not_in($prog, $so2prog->{$file});
+				push_if_not_in($file, $prog2so->{$prog});
 			}
 
 		}
