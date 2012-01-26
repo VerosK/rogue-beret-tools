@@ -1,4 +1,12 @@
 #!/usr/bin/perl -w
+#
+# Originally written by Corey Henderson
+#
+# Dual-Licensed - you may choose between:
+#
+# 1) Public Domain
+# 2) WTFPL - see http://sam.zoy.org/wtfpl/
+#
 
 use strict;
 use warnings;
