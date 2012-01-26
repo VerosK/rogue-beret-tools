@@ -1,3 +1,8 @@
+#
+# Find this and other interesting things at:
+# https://github.com/cormander/rogue-beret-tools
+#
+
 Name:		rb-nagios-plugins
 Version:	1.0
 Release:	1%{?dist}

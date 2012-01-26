@@ -1,3 +1,8 @@
+#
+# Find this and other interesting things at:
+# https://github.com/cormander/rogue-beret-tools
+#
+
 %global __spec_install_pre %{___build_pre}
 
 Summary: The Linux kernel

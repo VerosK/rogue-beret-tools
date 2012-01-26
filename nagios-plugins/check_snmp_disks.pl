@@ -9,6 +9,9 @@
 # 1) Public Domain
 # 2) WTFPL - see http://sam.zoy.org/wtfpl/
 #
+# Find this and other interesting things at:
+# https://github.com/cormander/rogue-beret-tools
+#
 
 use strict;
 use warnings;
