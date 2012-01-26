@@ -18,9 +18,9 @@ Summary: The Linux kernel
 %define buildid .grsec
 %define variant -grsec
 %define kernel_ver 2.6.32
-%define kernel_rel_ver 54
-%define grsec_rpm_id 2
-%define grsecurity_patch grsecurity-2.2.2-2.6.32.54-201201192026.patch
+%define kernel_rel_ver 55
+%define grsec_rpm_id 1
+%define grsecurity_patch grsecurity-2.2.2-2.6.32.55-201201252116.patch
 
 %define rhel 1
 %if %{rhel}
@@ -1679,6 +1679,9 @@ fi
 %endif
 
 %changelog
+* Wed Jan 25 2012 Corey Henderson <corman@cormander.com> [2.6.32-0.55.1.el6.grsec]
+- grsecurity-2.2.2-2.6.32.55-201201252116
+
 * Thu Jan 19 2012 Corey Henderson <corman@cormander.com> [2.6.32-0.54.2.el6.grsec]
 - grsecurity-2.2.2-2.6.32.54-201201192026
 
