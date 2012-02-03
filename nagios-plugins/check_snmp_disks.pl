@@ -25,6 +25,7 @@ my $snmpwalk = '/usr/bin/snmpwalk';
 
 my $warn;
 my $crit;
+my @a;
 my @i;
 my @d;
 
@@ -33,6 +34,7 @@ use Getopt::Long;
 my $result = GetOptions(
 	"w=i" => \$warn,
 	"c=i" => \$crit,
+	"a=s" => \@a,
 	"i=s" => \@i,
 	"d=s" => \@d,
 	"h|help" => \&usage,
@@ -42,6 +44,8 @@ sub usage {
 	print "Usage: $0 -w NUM -c NUM [-s] -- [snmpwalk options]\n";
 	print "\t-w\twarning threshhold\n";
 	print "\t-c\tcritical threshhold\n";
+	print "\t-a\tspecify warning/critical limits on a specific disk\n";
+	print "\t\texample: -a /var,75,85";
 	print "\n";
 	print "\tBy default, all disks are checked. You can supply -o or -d to change this:\n";
 	print "\n";
@@ -106,10 +110,19 @@ sub check_disk {
 
 	return if in_array($name, @d);
 
-	if ($usage >= $crit) {
+	my $c = $crit;
+	my $w = $warn;
+
+	foreach my $i (@a) {
+		if ($i =~ m|^$name,|) {
+			(my $x, $w, $c) = split /,/, $i, 3;
+		}
+	}
+
+	if ($usage >= $c) {
 		$status = "CRITICAL";
 		$ret = STATUS_CRITICAL;
-	} elsif ($usage >= $warn && $ret != STATUS_CRITICAL) {
+	} elsif ($usage >= $w && $ret != STATUS_CRITICAL) {
 		$status = "WARNING";
 		$ret = STATUS_WARN;
 	}
