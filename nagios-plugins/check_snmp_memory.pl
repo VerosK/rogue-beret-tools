@@ -84,6 +84,7 @@ sub do_snmp {
 }
 
 my $check;
+my $perfdata;
 my $realPercent;
 my $status_str;
 
@@ -103,9 +104,11 @@ if ($swap) {
 
 	my $swapFree = do_snmp($swapFreeOID);
 
-	$realPercent = (($swapTotal - $swapFree) / $swapTotal) * 100;
+	$realPercent = sprintf("%.2f", (($swapTotal - $swapFree) / $swapTotal) * 100);
 
 	$status_str = "Free => $swapFree Kb, Total => $swapTotal Kb";
+
+	$perfdata = "swap=$realPercent;;;;";
 
 } else {
 
@@ -129,9 +132,13 @@ if ($swap) {
 
 	my $memRealUsed = $memRealTotal - $memRealFree;
 
-	$realPercent = (($memRealUsed - $memRealBuffers - $memRealCached )/ $memRealTotal) * 100;
+	$realPercent = sprintf("%.2f", (($memRealUsed - $memRealBuffers - $memRealCached )/ $memRealTotal) * 100);
+	my $bufferPercent = sprintf("%.2f", ($memRealBuffers/$memRealTotal) * 100);
+	my $cachedPercent = sprintf("%.2f", ($memRealCached/$memRealTotal) * 100);
 
 	$status_str = "Free => $memRealFree Kb, Total => $memRealTotal Kb, Cached => $memRealCached Kb, Buffered => $memRealBuffers Kb";
+
+	$perfdata = "used=$realPercent;;;; cached=$cachedPercent;;;; buffers=$bufferPercent;;;;";
 
 }
 
@@ -151,7 +158,7 @@ if ($realPercent >= $crit) {
 	$ret = STATUS_OK;
 }
 
-print ": " . sprintf("%.2f", $realPercent) . " % used; " . $status_str . "\n";
+print ": " . $realPercent . " % used; " . $status_str . " |" . $perfdata . "\n";
 
 exit $ret
 

@@ -119,7 +119,7 @@ if ($crit && ($diff >= $crit || ($diff*-1) >= $crit)) {
 	$ret = STATUS_OK;
 }
 
-print "; offset $diff seconds\n";
+print "; offset $diff seconds |offset=$diff;;;;\n";
 
 exit $ret;
 

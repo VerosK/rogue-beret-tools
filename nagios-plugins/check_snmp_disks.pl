@@ -162,12 +162,14 @@ if (scalar(keys(%{$disks})) == 0 ) {
 } else {
 
 	my @status;
+	my @perf;
 
 	foreach my $key (sort {$disks->{$b} <=> $disks->{$a} } keys %{$disks}) {
 		push @status, "$key " . $disks->{$key} . "% full";
+		push @perf, "$key=" . $disks->{$key} . ";;;;";
 	}
 
-	print "$status: " . join(", ", @status) . "\n";
+	print "$status: " . join(", ", @status) . " |" . join(" ", @perf) . "\n";
 }
 
 exit $ret;

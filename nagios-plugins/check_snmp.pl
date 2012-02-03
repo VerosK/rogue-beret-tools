@@ -69,6 +69,7 @@ if ($? != 0) {
 my $ret;
 my $status;
 my $type;
+my $u = "";;
 
 my ($jnk, $x) = split / = /, $out, 2;
 
@@ -92,7 +93,11 @@ if ($crit && $snmp_value >= $crit) {
 	$ret = STATUS_WARN;
 }
 
-print "SNMP $status: $snmp_value" . ( $msg ? $msg : "" ) . "\n";
+if ($type and $type =~ /counter/i) {
+	$u = "c";
+}
+
+print "SNMP $status: $snmp_value" . ( $msg ? $msg : "" ) . " |snmp=$snmp_value$u;;;;\n";
 
 exit $ret;
 
