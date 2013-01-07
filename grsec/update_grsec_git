@@ -1,0 +1,91 @@
+#!/bin/bash
+
+upstream=$1
+
+export SSH_AUTH_SOCK=/home/cormander/.ssh/agent.sock
+
+workdir=/opt/linux-$upstream
+
+if [ ! -d $workdir ]; then
+	echo "Workdir $workdir does not exist"
+	exit 1
+fi
+
+cd $workdir
+
+if [ "2.6.32.y" = $upstream ]; then
+	patch=$(wget -q -O- http://grsecurity.net/download_stable.php| grep 'href="stable/grsecurity' | sed "s|</td>|\n|g" | grep '2\.6\.' | sed 's/.* href="\(stable\/grsecurity-.*\.patch\)".*/\1/g' | grep -v .sig | head -n1)
+else
+	patch=$(wget -q -O- http://grsecurity.net/test.php| grep 'href="test/grsecurity' | sed "s|</td>|\n|g" | grep '2\.6\.39' | sed 's/.* href="\(test\/grsecurity-.*\.patch\)".*/\1/g' | grep -v .sig | head -n1)
+fi
+
+grsec_kernel_version=$(echo $patch | sed 's/.*-\(2.6.[0-9\.]*\)-.*/\1/')
+
+git checkout -f $upstream
+
+HEAD=$(git log --pretty=oneline | head -n 1 | awk '{print $1}')
+
+git pull $upstream master
+
+NEW_HEAD=$(git log --pretty=oneline | head -n 1 | awk '{print $1}')
+
+# figure out the kernel version
+head -n 5 Makefile | sed 's/ //g' > get_kernel_version
+source get_kernel_version
+rm -f get_kernel_version
+
+upstream_kernel_version=$VERSION.$PATCHLEVEL.$SUBLEVEL$EXTRAVERSION
+
+if [ "$HEAD" != "$NEW_HEAD" ]; then
+
+	# if different than latest grsec, bail
+	if [ "$upstream_kernel_version" != "$grsec_kernel_version" ]; then
+
+		echo "Upstream and grsec kernel version aren't the same!"
+		echo "kernel.org = $upstream_kernel_version"
+		echo "grsecurity = $grsec_kernel_version ($patch)"
+		exit 1
+
+	fi
+
+	git checkout -f $HEAD
+	git symbolic-ref HEAD refs/heads/grsecurity-$upstream
+
+	rm -rf $(git status | sed 1d | sed 1d | sed 1d | grep '^#' | awk '{print $2}')
+
+	git commit -a -m "Prepare to update to latest upstream and re-apply grsecurity"
+
+	[ $? -ne 0 ] && echo "prep-commit failed" && exit 1
+
+	git merge -m "Auto-merge upstream" $upstream
+
+	[ $? -ne 0 ] && echo "auto-merge commit failed" && exit 1
+
+	HEAD=$NEW_HEAD
+
+fi
+
+git checkout -f $HEAD
+
+git symbolic-ref HEAD refs/heads/grsecurity-$upstream
+
+wget -q -O grsec.patch http://grsecurity.net/$patch
+
+patch --dry-run -p1 -fi grsec.patch
+
+if [ $? -ne 0 ]; then
+	echo "There was a problem applying the patch"
+	git clean -fdx
+	exit 1;
+fi
+
+patch -p1 -fi grsec.patch
+
+rm -f grsec.patch
+
+git add .
+
+git commit -a -m "$patch"
+
+git push --all origin
+

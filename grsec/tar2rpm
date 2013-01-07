@@ -1,0 +1,69 @@
+#!/bin/sh
+
+file=$1
+version=$2
+release=$3
+
+# TODO: use rpm arch macro instead?
+arch=$(arch)
+
+tmpdir=$(pwd)/rpm-buildroot
+
+cat << EOF > kernel.spec
+Name: kernel-grsec
+Summary: The Linux Kernel
+Version: $version
+Release: $release
+License: GPL
+Group: System Environment/Kernel
+Vendor: Rogue Beret
+URL: http://www.kernel.org
+Provides: grsecurity
+%define debug_package %{nil}
+
+%description
+The Linux Kernel, the core of the linux operating system
+
+%package headers
+Summary: Header files for the Linux Kernel
+Group: Development/System 
+Provides: kernel-headers
+%description headers
+Header files for the Linux Kernel
+
+%build
+
+%install
+
+%post
+# TODO: need post uninstall script to remove it
+if [ -x /sbin/new-kernel-pkg ]; then
+	/sbin/new-kernel-pkg --dracut --mkinitrd --depmod --install $version-grsec-$release.$arch
+fi
+exit 0
+
+%files
+%defattr (-, root, root)
+%dir
+/lib/modules/*
+/boot/*
+
+%files headers
+%dir
+/usr/src/linux-headers*
+/usr/src/kernels/*
+
+EOF
+
+# TODO: %ghost the initrd.img
+
+rm -rf $tmpdir
+mkdir -p $tmpdir/buildroot
+
+tar -C $tmpdir/buildroot -zxf $file
+
+rpmbuild -bb \
+	--define "_topdir $tmpdir" \
+	--buildroot $tmpdir/buildroot \
+	kernel.spec
+
