@@ -2,8 +2,8 @@
 #
 # Simple SNMP memory check - version 1.0
 #
-# Originally written by Corey Henderson
-#
+# Originally written by Corey Henderson, modified by Věroš Kaplan
+# 
 # Dual-Licensed - you may choose between:
 #
 # 1) Public Domain
@@ -17,6 +17,7 @@ use strict;
 use warnings;
 
 use POSIX qw(mktime);
+use DateTime;
 
 use constant STATUS_OK => 0;
 use constant STATUS_WARN => 1;
@@ -79,25 +80,20 @@ sub do_snmp {
 	return $x;
 }
 
-my $time_str = do_snmp("HOST-RESOURCES-MIB::hrSystemDate.0");
+my $time_str = do_snmp(".1.3.6.1.2.1.25.1.2.0");
 my $time;
 
 if ("ERROR" eq $time_str) {
 
-	$time_str = do_snmp("UCD-SNMP-MIB::versionCDate.0");
-
-	if ("ERROR" eq $time_str) {
 		print "SNMP problem - no value returned from host\n";
 		exit STATUS_UNKNOWN;
-	} else {
-		$time = versionCDate($time_str);
-	}
-
 } else {
+	print 'snmp: ' . $time_str . "\n";
 	$time = hrSystemDate($time_str);
 }
 
-my $diff = $time - time();
+my $diff_obj = $time - DateTime->now();
+my $diff = $diff_obj->in_units('seconds');
 
 if ($offset) {
 	$diff += $offset;
@@ -124,6 +120,8 @@ print "; offset $diff seconds |offset=$diff;;;;\n";
 exit $ret;
 
 sub hrSystemDate {
+	# 2013-6-3,21:49:39.0,+2:0
+
 	my ($str) = @_;
 
 	my ($year_str, $time_str, $tz_str) = split /,/, $str, 3;
@@ -131,25 +129,16 @@ sub hrSystemDate {
 	my ($year, $month, $day) = split /\-/, $year_str, 3;
 	my ($hr, $min, $sec) = split /:/, $time_str, 3;
 	my ($tz) = split /:/, $tz_str, 2;
+	if (length($tz) == 2) {
+		$tz = substr($tz,0,0) . '0' . substr($tz, 1,1);
+	}
 
-	my $tm = mktime($sec, $min, $hr, $day, $month-1, $year-1900, 0, 0, 0);
-	$tm -= (3600*($tz+7));
+	my $dt = DateTime->new(
+		year => $year, month => $month, day=> $day,
+		hour => $hr, minute => $min, second => int($sec),
+		nanosecond => 0,
+			time_zone=>$tz."00");
 
-	return $tm;
-}
-
-sub versionCDate {
-	my ($str) = @_;
-
-	my $months = { "Jan" => 0, "Feb" => 1, "Mar" => 2, "Apr" => 3, "May" => 4, "Jun" => 5, "Jul" => 6, "Aug" => 7, "Sep" => 8, "Oct" => 9, "Nov" => 10, "Dec" => 11 };
-
-	my ($x, $month_str, $day, $time_str, $year) = split /\s+/, $str, 5;
-
-	my ($hr, $min, $sec) = split /:/, $time_str, 3;
-	my $month = $months->{$month_str};
-
-	my $tm = mktime($sec, $min, $hr, $day, $month, $year-1900, 0, 0, 0);
-
-	return $tm;
+	return $dt;
 }
 
